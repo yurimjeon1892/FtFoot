@@ -1,4 +1,5 @@
 # FtFoot : Follow the Footprint :footprints:
+This repository contains the code (in PyTorch) for "Follow the Footprints: Self-supervised Traversability Estimation for Off-road Vehicle Navigation based on Geometric and Visual Cues" paper (ICRA 2024).
 
 ## Environment
 
