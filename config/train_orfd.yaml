@@ -1,0 +1,40 @@
+manual_seed: 0
+batch_size: 1
+num_workers: 4
+
+ckpt_root: ../ckpts
+resume_path: False
+
+model: GFL4
+
+data_config:
+  name: ORFD
+  data_root: /path/to/orfd
+  load_interval: 1
+  num_train_samples: -1
+  num_val_samples: -1
+
+  raw_cam_img_size: [720, 1280]
+  ratio: 2
+
+lr_config:
+  MultiStepLR:
+    gamma: 0.5
+    last_epoch: -1
+    milestones:
+    - 5
+    - 10
+    - 20
+
+optim_config:
+  AdamW:
+    lr: 0.001
+    weight_decay: 0.05
+
+loss_config:
+  lamb_ss: 1.
+  lamb_se: 1.
+  lamb_ce: 1.
+  lamb_sn: 1.
+
+end_epoch: 50

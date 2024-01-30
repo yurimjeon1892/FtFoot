@@ -1,0 +1,16 @@
+batch_size: 1
+num_workers: 4
+
+ckpt_root: ../ckpts
+resume_path: /path/ckpt/to/ckpt
+
+model: GFL4
+
+data_config:
+  name: ORFD
+  data_root: /path/to/orfd
+  load_interval: 1
+  num_test_samples: -1
+
+  raw_cam_img_size: [720, 1280]
+  ratio: 2

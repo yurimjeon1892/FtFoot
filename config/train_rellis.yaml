@@ -1,0 +1,40 @@
+manual_seed: 0
+batch_size: 1
+num_workers: 4
+
+ckpt_root: ../ckpts
+resume_path: False
+
+model: GFL4
+
+data_config:
+  name: RELLIS_3D
+  data_root: /path/to/rellis-3d
+  load_interval: 1
+  num_train_samples: -1
+  num_val_samples: 1000
+  
+  raw_cam_img_size: [1200, 1920]
+  ratio: 3
+
+lr_config:
+  MultiStepLR:
+    gamma: 0.5
+    last_epoch: -1
+    milestones:
+    - 5
+    - 10
+    - 20
+
+optim_config:
+  AdamW:
+    lr: 0.001
+    weight_decay: 0.05
+
+loss_config:
+  lamb_ss: 1.
+  lamb_se: 1.
+  lamb_ce: 5.
+  lamb_sn: 1.
+
+end_epoch: 25
