@@ -1,4 +1,4 @@
-# FtFoot : Follow the Footprint :footprints:
+# FtFoot : Follow the Footprints :footprints:
 This repository contains the code (in PyTorch) for "Follow the Footprints: Self-supervised Traversability Estimation for Off-road Vehicle Navigation based on Geometric and Visual Cues" paper (ICRA 2024).
 
 ## Environment
@@ -178,3 +178,5 @@ python ./path_plan/path_plan.py \
 ## Acknowledgements
 * Our implementation of GFL is based on https://github.com/kakaxi314/GuideNet
 * Our implementation of FSM is based on https://github.com/panzhiyi/URSS
+
+If you have any questions, please contact Yurim Jeon at yurimjeon1892@gmail.com
