@@ -29,7 +29,7 @@ Modify the torch-encoding script by referring to [this](https://github.com/zhang
 > `x=x.view(input_shape)`  
 > `return x`  
 > 
-> 2.  fix the code `site-packages/encoding/function/syncbn.py` at about line 102  
+> 2.  fix the code `site-packages/encoding/functions/syncbn.py` at about line 102  
 > from  
 > `ctx.save_for_backward(x,_ex,_exs,gamma,beta)`    
 > `return y`    
@@ -38,7 +38,7 @@ Modify the torch-encoding script by referring to [this](https://github.com/zhang
 > `ctx.mark_non_differentiable(running_mean,running_var)`  
 > `return y,running_mean,running_var`  
 > 
-> 3.  fix the code `site-packages/encoding/function/syncbn.py` at about line 109  
+> 3.  fix the code `site-packages/encoding/functions/syncbn.py` at about line 109  
 > from  
 > `def backward(ctx,dz):`  
 > to  

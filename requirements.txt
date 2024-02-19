@@ -12,4 +12,4 @@ tensorboardX==2.5.1
 torch-encoding==1.2.1
 tqdm==4.64.0
 scikit-image==0.20.0
-# open3d
+open3d==0.16.0
