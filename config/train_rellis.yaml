@@ -2,14 +2,14 @@ manual_seed: 0
 batch_size: 1
 num_workers: 4
 
-ckpt_root: ../ckpts
+ckpt_root: ./ckpts
 resume_path: False
 
 model: GFL4
 
 data_config:
   name: RELLIS_3D
-  data_root: /path/to/rellis-3d
+  data_root: /data/cv_datasets/off-road/rellis-3d
   load_interval: 1
   num_train_samples: -1
   num_val_samples: 1000

@@ -1,14 +1,14 @@
 batch_size: 1
 num_workers: 4
 
-ckpt_root: ../ckpts
-resume_path: /path/ckpt/to/ckpt
+ckpt_root: ./ckpts
+resume_path: RELLIS_3D-05-10-25-13:43:24/epoch_25.pth
 
 model: GFL4
 
 data_config:
   name: RELLIS_3D
-  data_root: /path/to/rellis-3d
+  data_root: /data/cv_datasets/off-road/rellis-3d
   load_interval: 1
   num_test_samples: -1
 

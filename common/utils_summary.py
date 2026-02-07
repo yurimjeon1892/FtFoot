@@ -18,13 +18,13 @@ def summary_image_draw(rgbd, gts, preds, cmap=plt.cm.plasma):
     sn_np = (np.transpose(sn_np, (1, 2, 0)) + 1) * 127
     sn_np = sn_np.astype('uint8') 
 
-    sp_np = gts["sp"].cpu().detach().numpy()[0][0, :, :]
-    sp_np = minmax_color_img_from_img_numpy(sp_np, cmap)
+    # sp_np = gts["sp"].cpu().detach().numpy()[0][0, :, :]
+    # sp_np = minmax_color_img_from_img_numpy(sp_np, cmap)
 
     trav_np = gts["fp"].cpu().detach().numpy()[0][0, :, :]
     trav_np = minmax_color_img_from_img_numpy(trav_np, cmap)
     
-    gt_img = np.concatenate([sn_np, sp_np, trav_np], 1)        
+    gt_img = np.concatenate([sn_np, trav_np], 1)        
 
     pred_sn_np = preds["sn"].cpu().detach().numpy()[0][:3, :, :]
     pred_sn_np = (np.transpose(pred_sn_np, (1, 2, 0)) + 1) * 127

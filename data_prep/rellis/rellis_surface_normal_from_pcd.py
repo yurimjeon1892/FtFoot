@@ -61,6 +61,7 @@ if __name__ == "__main__":
         file_list = natsort.natsorted(file_list)
         for fn in tqdm(file_list):
             str_seq_i = fn[:-4]
+            print(fn, str_seq_i)
 
             pc = pcd_read(os.path.join(args.data_root, "Rellis-3D", str(seq).zfill(5), "os1_cloud_node_kitti_bin", str_seq_i + '.bin'))
             pc = pc.T

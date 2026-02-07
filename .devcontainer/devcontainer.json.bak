@@ -1,0 +1,60 @@
+{
+	"name": "ftflow",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": "..",
+		"args": {
+			"USERNAME": "${localEnv:USER}",
+		}
+	},
+	"containerEnv": {
+		// "DISPLAY": "",
+		// "XAUTHORITY": "${localEnv:XAUTHORITY}",
+		"NVIDIA_VISIBLE_DEVICES": "all",
+		"NVIDIA_DRIVER_CAPABILITIES": "compute,utility,graphics",
+		// "QT_X11_NO_MITSHM": "1",
+	},
+	"mounts": [
+		// "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
+		"source=/mnt,target=/data,type=bind,consistency=cached,readonly=false", 
+		"source=/etc/passwd,target=/etc/passwd,type=bind",
+		"source=/etc/group,target=/etc/group,type=bind"
+	],
+	"runArgs": [
+		"--gpus=all",
+		"--network=host",
+		"--ipc=host",
+		"--pid=host",
+		"--uts=host",
+		"--name", "ftflow-${localEnv:USER}"
+	],
+	"settings": {
+		"editor.detectIndentation": false,
+		"editor.insertSpaces": false,
+	},
+	"extensions": [
+		"ms-python.python",
+		"oderwat.indent-rainbow",
+		"analytic-signal.preview-html",
+		"mhutchie.git-graph",
+	],
+	"editor.formatOnSave": true,
+    "[python]": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+        },
+        "editor.formatOnType": true
+    },
+    "python.formatting.provider": "black",
+    "python.formatting.blackPath": "black",
+    "python.formatting.blackArgs": [
+        "--line-length=88"
+    ],
+    "isort.args": [
+        "--profile",
+        "black"
+    ],
+	"workspaceMount": "source=${localWorkspaceFolder},target=/workspace/ftflow,type=bind",
+	"workspaceFolder": "/workspace/ftflow",
+}
