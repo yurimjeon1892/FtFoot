@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.interpolate import interp1d
 
+
 def compute_interp_path_from_wp(start_xp, start_yp, step=0.1):
     """
     Computes a reference path given a set of waypoints
@@ -31,13 +32,14 @@ def compute_interp_path_from_wp(start_xp, start_yp, step=0.1):
     else:
         return []
 
+
 def compute_path_from_wp(pts):
     """
     Computes a reference path given a set of waypoints
     """
     path = []
     for i in range(len(pts)):
-        j = -1 if i == len(pts) - 1  else i + 1
+        j = -1 if i == len(pts) - 1 else i + 1
         dx = pts[j][0] - pts[i][0]
         dy = pts[j][1] - pts[i][1]
         if j != -1:

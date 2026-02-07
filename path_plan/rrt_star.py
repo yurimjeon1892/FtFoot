@@ -1,8 +1,8 @@
-from tqdm import tqdm
-import numpy as np
 import matplotlib.pyplot as plt
-
+import numpy as np
 from rrt import RRT
+from tqdm import tqdm
+
 
 class RRTStar(RRT):
     class Node(RRT.Node):
@@ -11,32 +11,48 @@ class RRTStar(RRT):
             self.cost = 0.0
 
         def __repr__(self) -> str:
-            return f'{self.p}'
-    def __init__(self, start, goal, bounds, 
-                 max_extend_length=5.0,
-                 goal_p_th=5,
-                 goal_sample_rate=0.1,
-                 max_iter=100,
-                 path_tick=0.1,
-                 animation=False,
-                 height_fn=None,
-                 try_goal=False,
-                 connect_circle_dist=50.0,
-                 t_weight=10.0):
-        super().__init__(start, goal, bounds, max_extend_length,
-                         goal_p_th, goal_sample_rate,max_iter, path_tick, animation, height_fn)
+            return f"{self.p}"
+
+    def __init__(
+        self,
+        start,
+        goal,
+        bounds,
+        max_extend_length=5.0,
+        goal_p_th=5,
+        goal_sample_rate=0.1,
+        max_iter=100,
+        path_tick=0.1,
+        animation=False,
+        height_fn=None,
+        try_goal=False,
+        connect_circle_dist=50.0,
+        t_weight=10.0,
+    ):
+        super().__init__(
+            start,
+            goal,
+            bounds,
+            max_extend_length,
+            goal_p_th,
+            goal_sample_rate,
+            max_iter,
+            path_tick,
+            animation,
+            height_fn,
+        )
         self.try_goal = try_goal
-        self.connect_circle_dist = connect_circle_dist        
+        self.connect_circle_dist = connect_circle_dist
         self.t_weight = t_weight
 
-    def plan(self):        
+    def plan(self):
         last_index, min_cost = None, None
         goal_flag = False
         self.goal_iter = -1
         self.node_list = [self.start]
-        with tqdm(total=self.max_iter, desc='planning local path...') as pbar:
+        with tqdm(total=self.max_iter, desc="planning local path...") as pbar:
             for i in range(self.max_iter):
-                # Create a random node inside the bounded environment                
+                # Create a random node inside the bounded environment
                 pbar.update(1)
                 rnd = self.get_random_node()
                 # Find nearest node
@@ -53,7 +69,7 @@ class RRTStar(RRT):
                     self.node_list.append(new_node)
                     # Rewire the nodes in the proximity of new_node if it improves their costs
                     self.rewire(new_node, near_inds)
-                    if self.try_goal: #optional
+                    if self.try_goal:  # optional
                         self.try_goal_path(new_node)
 
                     if not goal_flag:
@@ -66,7 +82,9 @@ class RRTStar(RRT):
                         self.draw_graph(new_node)
 
                 if goal_flag:
-                    pbar.set_description(desc=f"\033[96mGoal founded at {self.goal_iter} iteration\033[00m ")
+                    pbar.set_description(
+                        desc=f"\033[96mGoal founded at {self.goal_iter} iteration\033[00m "
+                    )
 
         last_index, min_cost = self.best_goal_node_index()
         if last_index:
@@ -153,7 +171,7 @@ class RRTStar(RRT):
         nnode = len(self.node_list) + 1
         r = self.connect_circle_dist * np.sqrt((np.log(nnode) / nnode))
         dlist = [np.sum(np.square((node.p - new_node.p))) for node in self.node_list]
-        near_inds = [dlist.index(i) for i in dlist if i <= r ** 2]
+        near_inds = [dlist.index(i) for i in dlist if i <= r**2]
         return near_inds
 
     def new_cost(self, from_node, to_node):
@@ -165,7 +183,9 @@ class RRTStar(RRT):
 
     def t_distance(self, from_node, to_node, distance, eps=1e-6, thres=1.65):
         edge_node = self.steer(from_node, to_node)
-        edge_points = edge_node.path[:,:2] if edge_node else np.array([from_node.p, to_node.p])
+        edge_points = (
+            edge_node.path[:, :2] if edge_node else np.array([from_node.p, to_node.p])
+        )
         t_score = np.array([self.dem_fn(point) for point in edge_points])
 
         zt_score = (t_score - np.mean(t_score)) / max(np.std(t_score), eps)

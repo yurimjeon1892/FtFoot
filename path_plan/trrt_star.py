@@ -2,38 +2,56 @@
 # import sys
 # from threading import local
 
-import numpy as np
 # from tqdm import tqdm
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.patches import Polygon as Poly
+from misc import in_poly, normalization, process
+from path_manager import compute_interp_path_from_wp
+from rrt_star import RRTStar
+
 # import pyransac3d as pyrsc
 # from scipy.stats import wasserstein_distance
 
-from rrt_star import RRTStar
-from misc import in_poly, process, normalization
-from path_manager import compute_interp_path_from_wp
 # from models.path_tracker.mpc import MPC
 
+
 class TRRTStar(RRTStar):
-    def __init__(self, start, goal, bounds, 
-                 max_extend_length=5.0,
-                 goal_p_th=0.5,
-                 goal_sample_rate=0.1,
-                 max_iter=100,
-                 path_tick=0.1,
-                 animation=False,
-                 height_fn=None,
-                 try_goal=False,
-                 connect_circle_dist=50.0,
-                 cost_fn=None,
-                 cost_th=0.7,
-                 constraint_fn=None,
-                 bias_sampling=False,
-                 t_weight=1.,
-                 polygons=[]) -> None:
-        super().__init__(start, goal, bounds, max_extend_length,
-                         goal_p_th, goal_sample_rate,max_iter, path_tick, animation,
-                         height_fn, try_goal, connect_circle_dist)
+    def __init__(
+        self,
+        start,
+        goal,
+        bounds,
+        max_extend_length=5.0,
+        goal_p_th=0.5,
+        goal_sample_rate=0.1,
+        max_iter=100,
+        path_tick=0.1,
+        animation=False,
+        height_fn=None,
+        try_goal=False,
+        connect_circle_dist=50.0,
+        cost_fn=None,
+        cost_th=0.7,
+        constraint_fn=None,
+        bias_sampling=False,
+        t_weight=1.0,
+        polygons=[],
+    ) -> None:
+        super().__init__(
+            start,
+            goal,
+            bounds,
+            max_extend_length,
+            goal_p_th,
+            goal_sample_rate,
+            max_iter,
+            path_tick,
+            animation,
+            height_fn,
+            try_goal,
+            connect_circle_dist,
+        )
         self.cost_fn = cost_fn
         self.constraint_fn = constraint_fn
         self.bias_sampling = bias_sampling
@@ -56,7 +74,7 @@ class TRRTStar(RRTStar):
                 sample = self.uniform_sampling()
 
             sample = self.height_fn(sample)
-            if sample[2] == -np.inf or self.cost_fn(sample) >= self.cost_th :
+            if sample[2] == -np.inf or self.cost_fn(sample) >= self.cost_th:
                 return self.get_random_node()
             rnd = self.Node(sample)
         else:
@@ -67,7 +85,7 @@ class TRRTStar(RRTStar):
     def rejection_sampling(self):
         upper = np.array([self.bounds[1], self.bounds[3]])
         lower = np.array([self.bounds[0], self.bounds[2]])
-        q_sample = np.random.rand(2)*(upper-lower) + lower
+        q_sample = np.random.rand(2) * (upper - lower) + lower
 
         if self.constraint_fn is not None and not self.constraint_fn(q_sample):
             return self.rejection_sampling()
@@ -82,7 +100,7 @@ class TRRTStar(RRTStar):
     def uniform_sampling(self):
         upper = np.array([self.bounds[1], self.bounds[3]])
         lower = np.array([self.bounds[0], self.bounds[2]])
-        sample = np.random.rand(2)*(upper-lower) + lower
+        sample = np.random.rand(2) * (upper - lower) + lower
         if self.constraint_fn is not None and not self.constraint_fn(sample):
             return self.uniform_sampling()
         return sample
@@ -95,7 +113,9 @@ class TRRTStar(RRTStar):
 
     def t_distance(self, from_node, to_node, distance):
         edge_node = self.steer(from_node, to_node, self.max_extend_length)
-        edge_points = edge_node.path if edge_node else np.array([from_node.p, to_node.p])
+        edge_points = (
+            edge_node.path if edge_node else np.array([from_node.p, to_node.p])
+        )
 
         t_score = np.array([self.cost_fn(point) for point in edge_points])
 
@@ -112,9 +132,9 @@ class TRRTStar(RRTStar):
     def collision(self, to_node, from_node):
         """Check whether the path connecting node1 and node2 is in collision"""
         # if len(self.polygons) != 0:
-        p1, p2 = from_node.p[:2], to_node.p[:2]            
+        p1, p2 = from_node.p[:2], to_node.p[:2]
         edge_node = self.steer(from_node, to_node, self.max_extend_length)
-        edge_points = edge_node.path[:,:3] if edge_node else np.array([p1, p2])
+        edge_points = edge_node.path[:, :3] if edge_node else np.array([p1, p2])
         for point in edge_points:
             # if self.cost_fn(point) == 1.0:
             if self.cost_fn(point) > self.cost_th:
@@ -122,7 +142,7 @@ class TRRTStar(RRTStar):
             if self.check_polygons(point[:2]):
                 return True
 
-        return False # is not in collision
+        return False  # is not in collision
 
     def steer(self, from_node, to_node, max_extend_length=np.inf):
         """Connects from_node to a new_node in the direction of to_node
@@ -136,19 +156,26 @@ class TRRTStar(RRTStar):
             tmp_node = from_node.p - d / dist * max_extend_length
             new_node.p = self.height_fn(tmp_node[:2])
 
-        path = compute_interp_path_from_wp(start_xp=[from_node.p[0], new_node.p[0]],
-                                           start_yp=[from_node.p[1], new_node.p[1]], step=self.path_tick)
+        path = compute_interp_path_from_wp(
+            start_xp=[from_node.p[0], new_node.p[0]],
+            start_yp=[from_node.p[1], new_node.p[1]],
+            step=self.path_tick,
+        )
 
         if len(path) > 0:
-            path = np.insert(path, 0, [from_node.p[0], from_node.p[1], path[0,-1]], axis=0) # x,y,yaw
+            path = np.insert(
+                path, 0, [from_node.p[0], from_node.p[1], path[0, -1]], axis=0
+            )  # x,y,yaw
 
-            path = np.stack([np.concatenate([self.height_fn(pt[:2]), [pt[2]]]) for pt in path]) # x,y,z,yaw
+            path = np.stack(
+                [np.concatenate([self.height_fn(pt[:2]), [pt[2]]]) for pt in path]
+            )  # x,y,z,yaw
         else:
             return None
 
         new_node.parent = from_node
-        new_node.path = path # swap column : x, y, z, yaw
-        
+        new_node.path = path  # swap column : x, y, z, yaw
+
         d = from_node.p - new_node.p
         dist = np.linalg.norm(d)
         return new_node
@@ -161,9 +188,9 @@ class TRRTStar(RRTStar):
         # modify here: Generate the final path from the goal node to the start node.
         # We will check that path[0] == goal and path[-1] == start
         while node.parent is not None:
-        #   path.append(node.p)
+            #   path.append(node.p)
             for r_path in reversed(node.path):
-                path.append([*r_path,1]) # x,y,z,yaw,gear
+                path.append([*r_path, 1])  # x,y,z,yaw,gear
             node = node.parent
         # path.append(self.start.p)
         path.reverse()
@@ -182,32 +209,54 @@ class TRRTStar(RRTStar):
         if z:
             for node in self.node_list:
                 if node.parent and len(node.path) != 0 and self.height_fn:
-                    pz = np.array([self.height_fn(ip)[2] for ip  in node.path[:, :2]])
+                    pz = np.array([self.height_fn(ip)[2] for ip in node.path[:, :2]])
                     mask = pz != -np.inf
-                    plt.plot(node.path[mask,0], node.path[mask,1], pz[mask], "-g", alpha=0.5)
+                    plt.plot(
+                        node.path[mask, 0],
+                        node.path[mask, 1],
+                        pz[mask],
+                        "-g",
+                        alpha=0.5,
+                    )
         else:
             plt.clf()
             # for stopping simulation with the esc key.
-            plt.gcf().canvas.mpl_connect('key_release_event',
-                                        lambda event: [exit(0) if event.key == 'escape' else None])
+            plt.gcf().canvas.mpl_connect(
+                "key_release_event",
+                lambda event: [exit(0) if event.key == "escape" else None],
+            )
             if rnd is not None:
                 plt.plot(rnd.p[0], rnd.p[1], "^k")
             for node in self.node_list:
                 if node.parent and len(node.path) != 0:
-                    plt.plot(node.path[:,0], node.path[:,1], "-g")            
+                    plt.plot(node.path[:, 0], node.path[:, 1], "-g")
 
             if self.bounds is not None:
                 if self.animation:
-                    plt.plot([self.bounds[0], self.bounds[1], self.bounds[1], self.bounds[0], self.bounds[0]],
-                            [self.bounds[2], self.bounds[2], self.bounds[3], self.bounds[3], self.bounds[2]],
-                            "-k")
+                    plt.plot(
+                        [
+                            self.bounds[0],
+                            self.bounds[1],
+                            self.bounds[1],
+                            self.bounds[0],
+                            self.bounds[0],
+                        ],
+                        [
+                            self.bounds[2],
+                            self.bounds[2],
+                            self.bounds[3],
+                            self.bounds[3],
+                            self.bounds[2],
+                        ],
+                        "-k",
+                    )
 
             plt.plot(self.start.p[0], self.start.p[1], "xr")
             plt.plot(self.goal.p[0], self.goal.p[1], "xb")
 
             ax = plt.gca()
             for poly in self.polygons:
-                p = Poly(xy=poly, facecolor = 'k')
+                p = Poly(xy=poly, facecolor="k")
                 ax.add_patch(p)
 
             plt.axis("equal")

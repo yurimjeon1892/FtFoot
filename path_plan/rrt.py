@@ -1,10 +1,10 @@
 import math
 
-from tqdm import tqdm
-import numpy as np
 import matplotlib.pyplot as plt
-
+import numpy as np
 from path_manager import compute_interp_path_from_wp
+from tqdm import tqdm
+
 
 class RRT:
     class Node:
@@ -14,18 +14,23 @@ class RRT:
             self.path = []
 
         def __repr__(self) -> str:
-            return f'pos: {self.p}, path: {self.path}'
+            return f"pos: {self.p}, path: {self.path}"
 
-    def __init__(self, start, goal, bounds, 
-                 max_extend_length=5.0,
-                 goal_p_th=0.1,
-                 goal_sample_rate=0.1,
-                 max_iter=100,
-                 path_tick=0.1,
-                 animation=False,
-                 height_fn=None,
-                 dem_fn=None):
-        self.bounds = bounds        
+    def __init__(
+        self,
+        start,
+        goal,
+        bounds,
+        max_extend_length=5.0,
+        goal_p_th=0.1,
+        goal_sample_rate=0.1,
+        max_iter=100,
+        path_tick=0.1,
+        animation=False,
+        height_fn=None,
+        dem_fn=None,
+    ):
+        self.bounds = bounds
         self.max_extend_length = max_extend_length
         self.goal_p_th = goal_p_th
         self.goal_sample_rate = goal_sample_rate
@@ -33,8 +38,8 @@ class RRT:
         self.node_list = []
         self.path_tick = path_tick
         self.animation = animation
-        self.height_fn = height_fn        
-        self.dem_fn = dem_fn            
+        self.height_fn = height_fn
+        self.dem_fn = dem_fn
 
         self.set_start_goal(start, goal)
 
@@ -47,7 +52,7 @@ class RRT:
         """Plans the path from start to goal while avoiding obstacles"""
         self.goal_iter = -1
         self.node_list = [self.start]
-        with tqdm(total=self.max_iter, desc='planning local path...') as pbar:
+        with tqdm(total=self.max_iter, desc="planning local path...") as pbar:
             for i in range(self.max_iter):
                 # 1) Create a random node (rnd_node) inside
                 # the bounded environment
@@ -79,7 +84,7 @@ class RRT:
                             # plt.show()
                             plt.close()
                         return final_path, self.path_length(final_path)
-                    
+
         # last_index, min_cost = self.best_goal_node_index()
         # return final_path, self.path_length(final_path)
         return None  # cannot find path
@@ -93,13 +98,18 @@ class RRT:
         dist = np.linalg.norm(d)
         if dist > max_extend_length:
             # rescale the path to the maximum extend_length
-            new_node.p  = from_node.p - d / dist * max_extend_length
+            new_node.p = from_node.p - d / dist * max_extend_length
             dist = max_extend_length
 
-        path = compute_interp_path_from_wp(start_xp=[from_node.p[0], new_node.p[0]],
-                                           start_yp=[from_node.p[1], new_node.p[1]], step=self.path_tick)
+        path = compute_interp_path_from_wp(
+            start_xp=[from_node.p[0], new_node.p[0]],
+            start_yp=[from_node.p[1], new_node.p[1]],
+            step=self.path_tick,
+        )
         if len(path) > 0:
-            path = np.insert(path, 0, [from_node.p[0], from_node.p[1], path[0,-1]], axis=0)
+            path = np.insert(
+                path, 0, [from_node.p[0], from_node.p[1], path[0, -1]], axis=0
+            )
         else:
             return None
 
@@ -118,7 +128,7 @@ class RRT:
             # Sample random point inside boundaries
             upper = np.array([self.bounds[1], self.bounds[3]])
             lower = np.array([self.bounds[0], self.bounds[2]])
-            sample = np.random.rand(2)*(upper-lower) + lower
+            sample = np.random.rand(2) * (upper - lower) + lower
 
             z_sample = self.height_fn(sample)[2]
             if z_sample == -np.inf:
@@ -147,17 +157,17 @@ class RRT:
 
         dist = np.linalg.norm(p1 - p2)
 
-        if np.isnan(dist) :
+        if np.isnan(dist):
             return True
 
         if self.dem_fn is not None:
             edge_node = self.steer(node2, node1)
-            edge_points = edge_node.path[:,:2] if edge_node else np.array([p1, p2])
+            edge_points = edge_node.path[:, :2] if edge_node else np.array([p1, p2])
             for point in edge_points:
                 if np.isnan(self.dem_fn(point)):
                     return True
 
-        return False # is not in collision
+        return False  # is not in collision
 
     def final_path(self, goal_ind):
         """Compute the final path from the goal node to the start node"""
@@ -167,10 +177,10 @@ class RRT:
         # modify here: Generate the final path from the goal node to the start node.
         # We will check that path[0] == goal and path[-1] == start
         while node.parent is not None:
-        #   path.append(node.p)
+            #   path.append(node.p)
             for r_path in reversed(node.path):
                 pz = self.height_fn(r_path[:2])[2] if self.height_fn else 0
-                path.append([r_path[0],r_path[1],pz,r_path[2],1]) # x,y,z,yaw,gear
+                path.append([r_path[0], r_path[1], pz, r_path[2], 1])  # x,y,z,yaw,gear
             node = node.parent
         # path.append(self.start.p)
         path.reverse()
@@ -180,19 +190,27 @@ class RRT:
         if z:
             for node in self.node_list:
                 if node.parent and len(node.path) != 0 and self.height_fn:
-                    pz = np.array([self.height_fn(ip)[2] for ip  in node.path[:, :2]])
+                    pz = np.array([self.height_fn(ip)[2] for ip in node.path[:, :2]])
                     mask = pz != -np.inf
-                    plt.plot(node.path[mask,0], node.path[mask,1], pz[mask], "-g", alpha=0.5)
+                    plt.plot(
+                        node.path[mask, 0],
+                        node.path[mask, 1],
+                        pz[mask],
+                        "-g",
+                        alpha=0.5,
+                    )
         else:
             plt.clf()
             # for stopping simulation with the esc key.
-            plt.gcf().canvas.mpl_connect('key_release_event',
-                                        lambda event: [exit(0) if event.key == 'escape' else None])
+            plt.gcf().canvas.mpl_connect(
+                "key_release_event",
+                lambda event: [exit(0) if event.key == "escape" else None],
+            )
             if rnd is not None:
                 plt.plot(rnd.p[0], rnd.p[1], "^k")
             for node in self.node_list:
                 if node.parent and len(node.path) != 0:
-                    plt.plot(node.path[:,0], node.path[:,1], "-g")            
+                    plt.plot(node.path[:, 0], node.path[:, 1], "-g")
 
             plt.plot(self.start.p[0], self.start.p[1], "xr")
             plt.plot(self.goal.p[0], self.goal.p[1], "xb")
@@ -204,30 +222,32 @@ class RRT:
     @staticmethod
     def plot_scene(start, goal, bounds, z=False):
         if z:
-            ax = plt.gca(projection='3d', adjustable='box')
+            ax = plt.gca(projection="3d", adjustable="box")
             # ax.set_aspect('equal')
             ax.plot(start[0], start[1], start[2], "*r", markersize=15)
             ax.plot(goal[0], goal[1], goal[2], "*b", markersize=15)
-            plt.legend(('start', 'goal'), loc='upper left')
+            plt.legend(("start", "goal"), loc="upper left")
             ax.set_xlim3d([bounds[0], bounds[1]])
             ax.set_ylim3d([bounds[2], bounds[3]])
             ax.set_zlim3d([bounds[4], bounds[5]])
-            ax.set_box_aspect([bounds[1] - bounds[0],bounds[3] - bounds[2], 10])
-        else:                        
-            plt.axis([bounds[0]-0.5, bounds[1]+0.5, bounds[2]-0.5, bounds[3]+0.5])
+            ax.set_box_aspect([bounds[1] - bounds[0], bounds[3] - bounds[2], 10])
+        else:
+            plt.axis(
+                [bounds[0] - 0.5, bounds[1] + 0.5, bounds[2] - 0.5, bounds[3] + 0.5]
+            )
             plt.plot(start[0], start[1], "*r", markersize=15)
             plt.plot(goal[0], goal[1], "*b", markersize=15)
-            plt.legend(('start', 'goal'), loc='upper left')
-            plt.gca().set_aspect('equal')
+            plt.legend(("start", "goal"), loc="upper left")
+            plt.gca().set_aspect("equal")
 
     @staticmethod
     def plot_path(path, verbose=False, z=False):
         if verbose:
-            print(f'optimal path : {path}')
+            print(f"optimal path : {path}")
         if z:
-            plt.plot(path[:,0], path[:,1], path[:,2], '-r')
+            plt.plot(path[:, 0], path[:, 1], path[:, 2], "-r")
         else:
-            plt.plot(path[:,0], path[:,1], '-r')
+            plt.plot(path[:, 0], path[:, 1], "-r")
 
     @staticmethod
     def path_length(path):

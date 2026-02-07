@@ -1,48 +1,60 @@
+import argparse
 import os
+import sys
+
 import cv2
 import numpy as np
-import argparse
-
 from tqdm import tqdm
 
-import sys; sys.path.append('./')
+sys.path.append("./")
 
 from common.utils_loader import *
 
-def make_sample_dataset(args):  
+
+def make_sample_dataset(args):
 
     calib_dict, cam_name_dict = {}, {}
     for seq in args.seqs:
-
-        calib_dict[seq] = {}  
-        Tr_fn = os.path.join(args.data_path, "Rellis_3D", str(seq).zfill(5), "transforms.yaml")
+        calib_dict[seq] = {}
+        Tr_fn = os.path.join(
+            args.data_path, "Rellis_3D", str(seq).zfill(5), "transforms.yaml"
+        )
         RT = get_lidar2cam_mtx(Tr_fn)
         calib_dict[seq]["Tr"] = RT
         calib_dict[seq]["Tr_inv"] = np.linalg.inv(RT)
 
-        P_fn = os.path.join(args.data_path, "Rellis-3D", str(seq).zfill(5), "camera_info.txt")
+        P_fn = os.path.join(
+            args.data_path, "Rellis-3D", str(seq).zfill(5), "camera_info.txt"
+        )
         P = get_cam_mtx(P_fn)
         P_eye = np.eye(4)
-        P_eye[:3,:3] = P
+        P_eye[:3, :3] = P
         P_eye = P_eye
         calib_dict[seq]["P"] = P_eye
-        calib_dict[seq]["P_inv"] = np.linalg.inv(P_eye)  
+        calib_dict[seq]["P_inv"] = np.linalg.inv(P_eye)
 
         cam_name_dict[seq] = {}
-        file_list = os.listdir(os.path.join(args.data_path, "Rellis-3D", str(seq).zfill(5), "pylon_camera_node"))
+        file_list = os.listdir(
+            os.path.join(
+                args.data_path, "Rellis-3D", str(seq).zfill(5), "pylon_camera_node"
+            )
+        )
         for file_one in file_list:
             fn = file_one.split("/")[-1]
             cam_name_dict[seq][fn[5:11]] = fn[:-4]
 
     sample_list = []
-    for seq in args.seqs:         
-
-        seq_str = str(seq).zfill(5)   
-        f = open(os.path.join(args.data_path, "Rellis-3D", seq_str, "poses.txt"), 'r')
+    for seq in args.seqs:
+        seq_str = str(seq).zfill(5)
+        f = open(os.path.join(args.data_path, "Rellis-3D", seq_str, "poses.txt"), "r")
         poses_all = f.readlines()
         f.close()
 
-        file_list = os.listdir(os.path.join(args.data_path, "Rellis-3D", seq_str, "os1_cloud_node_kitti_bin"))
+        file_list = os.listdir(
+            os.path.join(
+                args.data_path, "Rellis-3D", seq_str, "os1_cloud_node_kitti_bin"
+            )
+        )
         for fn in file_list:
             int_frame = int(fn[:-4])
 
@@ -51,48 +63,83 @@ def make_sample_dataset(args):
             poses_tmp = []
             for fr_n in range(int_frame, min(int_frame + 150, len(poses_all))):
                 Pj = pose_read(poses_all[fr_n])
-                P_ij = np.linalg.inv(Pi) @ Pj # 4x4
+                P_ij = np.linalg.inv(Pi) @ Pj  # 4x4
                 poses_tmp.append(P_ij)
 
             str_frame = str(int_frame).zfill(6)
-            indiv_sample = {"image": os.path.join(args.data_path, "Rellis-3D", seq_str, "pylon_camera_node", cam_name_dict[seq][str_frame] + ".jpg"),
-                            "point": os.path.join(args.data_path, "Rellis-3D", seq_str, "os1_cloud_node_kitti_bin", str_frame + '.bin'),
-                            "sn": os.path.join(args.save_path, "Rellis-3D-custom", seq_str, "surface_normal", str_frame + '.npy'),      
-                            "sp": os.path.join(args.save_path, "Rellis-3D-custom", seq_str, "super_pixel", str_frame + '.png'),   
-                            "save_path": os.path.join(args.save_path, "Rellis-3D-custom", seq_str),               
-                            "calib": calib_dict[seq],
-                            "poses": poses_tmp,
-                            "fname": str_frame}
+            indiv_sample = {
+                "image": os.path.join(
+                    args.data_path,
+                    "Rellis-3D",
+                    seq_str,
+                    "pylon_camera_node",
+                    cam_name_dict[seq][str_frame] + ".jpg",
+                ),
+                "point": os.path.join(
+                    args.data_path,
+                    "Rellis-3D",
+                    seq_str,
+                    "os1_cloud_node_kitti_bin",
+                    str_frame + ".bin",
+                ),
+                "sn": os.path.join(
+                    args.save_path,
+                    "Rellis-3D-custom",
+                    seq_str,
+                    "surface_normal",
+                    str_frame + ".npy",
+                ),
+                "sp": os.path.join(
+                    args.save_path,
+                    "Rellis-3D-custom",
+                    seq_str,
+                    "super_pixel",
+                    str_frame + ".png",
+                ),
+                "save_path": os.path.join(args.save_path, "Rellis-3D-custom", seq_str),
+                "calib": calib_dict[seq],
+                "poses": poses_tmp,
+                "fname": str_frame,
+            }
             sample_list.append(indiv_sample)
     return sample_list, calib_dict
 
+
 def plot_footprint(calib_mtx, poses, raw_cam_img_size, ratio):
-    """
-    """    
+    """ """
     gt_img_size = (int(raw_cam_img_size[0] / ratio), int(raw_cam_img_size[1] / ratio))
     footprint = np.zeros(gt_img_size, dtype=float)
 
-    num_circle, num_cline, rad_circle = 1, 10, 0.5   
+    num_circle, num_cline, rad_circle = 1, 10, 0.5
     origin_os1 = []
     for i in range(360):
-        rad_ = 2 * np.pi * i / 360 
+        rad_ = 2 * np.pi * i / 360
         for n in range(num_circle):
             for r in range(num_cline):
                 rr = (r / num_cline) * 0.5 * rad_circle
-                origin_os1.append([rr * np.cos(rad_) - n * 0.5 * rad_circle + 1, rr * np.sin(rad_), -1, 1])
-    origin_os1 = np.array(origin_os1)  
+                origin_os1.append(
+                    [
+                        rr * np.cos(rad_) - n * 0.5 * rad_circle + 1,
+                        rr * np.sin(rad_),
+                        -1,
+                        1,
+                    ]
+                )
+    origin_os1 = np.array(origin_os1)
 
     for P_ij in poses:
-        # P_ij = np.linalg.inv(P_ji)       
-        
+        # P_ij = np.linalg.inv(P_ji)
+
         cj_on_Pi = calib_mtx @ P_ij @ origin_os1.T
-        for idx, xyw in enumerate(cj_on_Pi.T):        
+        for idx, xyw in enumerate(cj_on_Pi.T):
             x = xyw[0]
-            y = xyw[1] 
-            w = xyw[2] 
+            y = xyw[1]
+            w = xyw[2]
             is_in_img = (
-                w > 0 and 0 <= x < w * raw_cam_img_size[1] and 0 <= y < w * raw_cam_img_size[0]
-            )        
+                w > 0
+                and 0 <= x < w * raw_cam_img_size[1]
+                and 0 <= y < w * raw_cam_img_size[0]
+            )
             if is_in_img:
                 xx, yy = int(x / (w * ratio)), int(y / (w * ratio))
                 footprint[yy, xx] = 1
@@ -101,25 +148,38 @@ def plot_footprint(calib_mtx, poses, raw_cam_img_size, ratio):
 
     return footprint
 
+
 def file_reader(sample_one):
     """
     :param sample_path:
     :return:
     """
     im_np = rgb_read(sample_one["image"])
-    pc_np = pcd_read(sample_one["point"])    
+    pc_np = pcd_read(sample_one["point"])
     # sn_np = np.load(sample_one["sn"])
     # sp_np = cv2.imread(sample_one["sp"], cv2.IMREAD_GRAYSCALE)
-    return im_np, pc_np, 0, 0, sample_one["calib"], sample_one["poses"], sample_one["fname"]
+    return (
+        im_np,
+        pc_np,
+        0,
+        0,
+        sample_one["calib"],
+        sample_one["poses"],
+        sample_one["fname"],
+    )
+
 
 if __name__ == "__main__":
-
     # Create object for parsing command-line options
     parser = argparse.ArgumentParser(description="Prepare all RELLIS-3D dataset")
     # Add argument which takes path to a bag file as an input
-    parser.add_argument("--data_path", type=str, help="Dataset directory", required=True)
+    parser.add_argument(
+        "--data_path", type=str, help="Dataset directory", required=True
+    )
     parser.add_argument("--save_path", type=str, help="Save directory", required=True)
-    parser.add_argument("--seqs", nargs='+', help="Rellis sequence number", required=True)
+    parser.add_argument(
+        "--seqs", nargs="+", help="Rellis sequence number", required=True
+    )
     parser.add_argument("--ratio", type=int, help="Image resize ratio", default=3)
 
     # Parse the command line arguments to an object
@@ -134,42 +194,59 @@ if __name__ == "__main__":
 
     sample_list, calib_dict = make_sample_dataset(args)
 
-    for seq in args.seqs:     
-        seq_str = str(seq).zfill(5)  
-        os.makedirs(os.path.join(args.save_path, "Rellis-3D-custom", seq_str, "rgbd"), exist_ok=True)
+    for seq in args.seqs:
+        seq_str = str(seq).zfill(5)
+        os.makedirs(
+            os.path.join(args.save_path, "Rellis-3D-custom", seq_str, "rgbd"),
+            exist_ok=True,
+        )
         # os.makedirs(os.path.join(args.save_path, "Rellis-3D-custom", seq_str, "sn"), exist_ok=True)
         # os.makedirs(os.path.join(args.save_path, "Rellis-3D-custom", seq_str, "sp"), exist_ok=True)
         # os.makedirs(os.path.join(args.save_path, "Rellis-3D-custom", seq_str, "fp"), exist_ok=True)
 
         # preprocess calib
-        calib_mtx = calib_dict[seq]["P"] @ calib_dict[seq]["Tr"] 
-        np.save(os.path.join(args.save_path, "Rellis-3D-custom", seq_str + ".npy"), calib_mtx)
+        calib_mtx = calib_dict[seq]["P"] @ calib_dict[seq]["Tr"]
+        np.save(
+            os.path.join(args.save_path, "Rellis-3D-custom", seq_str + ".npy"),
+            calib_mtx,
+        )
 
     raw_cam_img_size = (1200, 1920)
 
     sample_item_list = []
     for sample in tqdm(sample_list):
-        
         im_np, pc_np, sn_np, sp_np, calib, poses, fname = file_reader(sample)
 
         # preprocess image
         im_np = crop_image(im_np, raw_cam_img_size)
-        im_np = resize_rgb_image(im_np, (int(raw_cam_img_size[0] / args.ratio), int(raw_cam_img_size[1] / args.ratio)))   
-        im_np = np.transpose(im_np, (2, 0, 1))  
-        im_np = im_np / (2 ** 8)
+        im_np = resize_rgb_image(
+            im_np,
+            (
+                int(raw_cam_img_size[0] / args.ratio),
+                int(raw_cam_img_size[1] / args.ratio),
+            ),
+        )
+        im_np = np.transpose(im_np, (2, 0, 1))
+        im_np = im_np / (2**8)
 
         # preprocess pcd
         pc_np = pc_np.T
         # shuffle the point cloud data, this is necessary!
         pc_np = pc_np[:, np.random.permutation(pc_np.shape[1])]
-        pc_np = pc_np[:3, :]  # 3xN 
+        pc_np = pc_np[:3, :]  # 3xN
 
         # preprocess calib
-        calib_mtx = calib["P"] @ calib["Tr"] 
+        calib_mtx = calib["P"] @ calib["Tr"]
 
         # preprocess depth
         depth_np = depth_img_from_cartesian_pc_numpy(pc_np, calib_mtx, raw_cam_img_size)
-        depth_np = resize_depth_image(depth_np, (int(raw_cam_img_size[0] / args.ratio), int(raw_cam_img_size[1] / args.ratio)))   
+        depth_np = resize_depth_image(
+            depth_np,
+            (
+                int(raw_cam_img_size[0] / args.ratio),
+                int(raw_cam_img_size[1] / args.ratio),
+            ),
+        )
         depth_np = np.expand_dims(depth_np, 0)
 
         # preprocess input
@@ -177,11 +254,11 @@ if __name__ == "__main__":
 
         # # preprocess gt
         # sn_np = sn_image_from_npy(sn_np, raw_cam_img_size, px=9)
-        # sn_np = resize_sn_image(sn_np, (int(raw_cam_img_size[0] / args.ratio), int(raw_cam_img_size[1] / args.ratio)))          
-        # sn_np = np.transpose(sn_np, (2, 0, 1)) 
+        # sn_np = resize_sn_image(sn_np, (int(raw_cam_img_size[0] / args.ratio), int(raw_cam_img_size[1] / args.ratio)))
+        # sn_np = np.transpose(sn_np, (2, 0, 1))
 
         # sp_np = crop_image(sp_np, raw_cam_img_size)
-        # sp_np = resize_rgb_image(sp_np, (int(raw_cam_img_size[0] / args.ratio), int(raw_cam_img_size[1] / args.ratio)))  
+        # sp_np = resize_rgb_image(sp_np, (int(raw_cam_img_size[0] / args.ratio), int(raw_cam_img_size[1] / args.ratio)))
         # sp_np[sp_np > 0] = 255
         # sp_np = np.expand_dims(sp_np, 0)
 
